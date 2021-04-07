@@ -1,0 +1,11 @@
+### 家用电脑工作环境 ###
+local_path:="F:\\_WorkSpace\\python\\PythonCode\\sage\\0 实战\\gap_pkg\\";
+Join := function(args...)
+    ## 连接字符串 ##
+    return JoinStringsWithSeparator(args,"");
+end;;
+
+Read(Join(local_path,"RexStandard.grp"));
+Read(Join(local_path,"RexLie.grp"));
+Rex := [[RexStandard,RexLie],
+["RexStandard", "RexLie"]];

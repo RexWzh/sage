@@ -1,0 +1,83 @@
+############## 包含以下函数 ##############
+
+#1.print 多个元素打印，以空格隔开
+#2.pprint 打印二维列表
+#3.Join 连接字符串
+#4.IfElse 一个方便的工具
+#5.ListIf 模仿Python的列表生成器
+
+############## 1.函数 print ##############
+print := function(args...)
+    ## 仿写Python中的print ##
+    local i;
+    for i in args do
+        Print(i," ");
+    od;
+    Print("\n");
+end;;
+
+
+############## 2.函数 pprint ##############
+pprint := function(mat)
+    ## 打印二维列表 ##
+    local row,i,colm,m,new; #colm 记录每行最大值
+    colm := [];
+    for i in [1..Size(mat[1])] do #对列进行遍历
+        m := 1; 
+        for row in mat do
+            new := Int(Size(String(row[i]))/8)+1;
+            if  new > m then 
+                m := new;
+            fi;
+        od;
+        Add(colm,m);
+    od;
+    for row in mat do 
+        for i in [1..Size(mat[1])] do
+            new := row[i];
+            m := colm[i] - Int(Size(String(new))/8);
+            Print(new,JoinStringsWithSeparator(List([1..m],i->"\t"),""));
+        od;
+    Print("\n");
+    od;
+end;;
+
+
+############## 3.函数 Join ##############
+Join := function(args...)
+    ## 连接字符串 ##
+    return JoinStringsWithSeparator(args,"");
+end;;
+
+
+############## 4.函数 IfElse ##############
+IfElse := function(bool,IfTrue,Else)
+    ## 一个方便的工具 ##
+    if bool then 
+        return IfTrue;
+    else 
+        return Else;
+    fi;
+end;
+
+
+############## 5.函数 ListIf ##############
+ListIf := function(list,value,chk)
+    ## 模仿Python的列表生成器 ##
+    local new,i;
+    new := [];
+    for i in list do
+        if chk(i) then 
+            Add(new,value(i));
+        fi;
+    od;
+    return new;
+end;
+
+RexStandard := [print,pprint,Join,IfElse,ListIf,
+"RexStandard print pprint Join IfElse ListIf"];
+
+
+
+
+

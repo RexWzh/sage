@@ -1,0 +1,310 @@
+############## 包含以下函数 ##############
+
+# 1.LieExp 计算exp(导子),第二参数默认取0
+
+# 2.SetTable 批量填写结构常数列表
+# 3.NewTable 新建并填写结构常数列表
+# 4.list2vector 将结构常数中的列表翻译为对应向量
+# 5.SymbolizeTable 将结构常数表格转为符号意义
+# 6.ReadTable 翻译结构常数列表的乘积意义
+
+# 7.LieThetas 求thetai=exp(adei)*exp(-adfi)*exp(adei) 的矩阵表达
+# 8.GroupOrdersMat gens交错相乘，阶数构成的矩阵 
+# 9.SymbolizeVector 将向量转为符号语言
+# 10.Coordination 计算向量在基下的坐标
+# 11.B 根系R下，向量killing型内积
+
+#12.SimpleDecomposition 正根的单根分解
+#13.PositiveSorted 正根按字典序排序（升序）
+#14.ExtraspecialRoots 正根非单根的extraspecial分解
+
+#15.RootsFactorial 输入正根，返回正根系下的求和系数
+#16.SymbolicPositiveRoots 打印正根系的单根表示（符号表示）
+
+############## 函数1 LieExp ##############
+LieExp := function(mat) 
+    ## 求导子的指数函数,第二参数默认取0 ##
+    local i,exp_mat,new_mat;
+    i := 1;
+    exp_mat := IdentityMat(Size(mat),Rationals);
+    new_mat := mat;
+    while not IsZero(new_mat) do #循环至添加矩阵为0
+        exp_mat := exp_mat + 1/Factorial(i)*new_mat;
+        i := i + 1;
+        new_mat := mat^i;
+    od;
+    return exp_mat;
+end;;
+
+############## 函数2 SetTable ##############
+SetTable := function(T,list) 
+    ## 批量填写结构常数列表 ##
+    local i,n,l1,l2,l3;
+    n := Length(list)/3;; #填入数目为n
+    l1 := List([1..n],i->list[3*i-2]); #行位置
+    l2 := List([1..n],i->list[3*i-1]); #列位置
+    l3 := List([1..n],i->list[3*i]);   #该位置上的向量
+    for i in [1..n] do
+        SetEntrySCTable(T,l1[i],l2[i],l3[i]); #填写表格
+    od;
+end;;
+
+############## 函数3 NewTable ##############
+NewTable := function(n,arg...)
+    ## 新建并填写结构常数列表 ##
+    local T;
+    T := EmptySCTable(n,0);
+    SetTable(T,arg);
+    return T;
+end;;
+
+
+############## 函数4 list2vector ##############
+list2vector := function(l)
+    ## 将结构常数中的列表翻译为对应向量 ##
+    local vec,i,v;
+    vec := 0;
+    for i in [1..Size(l[1])] do #l[1]为向量，l[2]为系数
+        v := X(Rationals,StringFormatted("v{}",l[1][i])); #定义不定元
+        vec := vec + v*l[2][i];
+    od;
+    return vec;
+end;;
+
+
+############## 函数5 SymbolizeTable ##############
+SymbolizeTable := function(T)
+    ## 将结构常数表格转为符号意义 ##
+    local l,n,i,j;
+    l := []; #乘积信息
+    n := Size(T)-2; #表格阶数
+    for i in [1..n] do 
+        Add(l,[]); #添加一行
+        for j in [1..n] do 
+            Add(l[i],list2vector(T[i][j]));
+        od;
+    od;
+    return l;
+end;;
+
+############## 函数6 ReadTable ##############
+ReadTable := function(T)
+    ## 翻译结构常数列表的乘积意义 ##
+    local n,i,j;
+    T := SymbolizeTable(T); #符号化
+    n := Length(T); #阶数
+    for i in [1..n] do 
+        for j in [1..n] do
+            Print(StringFormatted("v{}*v{} =",i,j),T[i][j],"\n");
+        od;
+    od;
+end;;
+
+
+############## 函数7 LieThetas ##############
+LieThetas := function(s,n)
+    ## 求thetai=exp(adei)*exp(-adfi)*exp(adei) 的矩阵表达 ##
+    local L,b,m,ade,adf,theta;
+    L := SimpleLieAlgebra(s,n,Rationals); #新建李代数
+    b := Basis(L); #获取李代数一组基
+    ade := List([1..n],i->AdjointMatrix(b,b[i])); #初始化ei
+    m := (Size(b)-n)/2; #正根总数
+    adf := List([1..n],i->AdjointMatrix(b,b[m+i])); #初始化fi
+    theta := List([1..n],i->LieExp(ade[i])*LieExp(-adf[i])*LieExp(ade[i])); #初始化thetai
+    return theta;
+end;
+
+
+############## 函数8 GroupOrdersMat ##############
+GroupOrdersMat := function(gens)
+    ## gens交错相乘，阶数构成的矩阵 ##
+    local orders,n,i,j;
+    orders := [];
+    n := Size(gens);
+    for i in [1..n] do 
+        Add(orders,[]);
+        for j in [1..n] do
+            Add(orders[i],Order(gens[i]*gens[j]));
+        od;
+    od;
+    return orders;
+end;;
+
+
+############## 函数9 SymbolizeVector ##############
+SymbolizeVector := function(l,name...)
+    ## 将向量转为符号语言 ##
+    local expr,i,s;
+    if Size(name)=0 then
+        s := "v";
+    else s := name[1];
+    fi;
+    expr := 0;
+    for i in [1..Size(l)] do 
+        expr := expr + l[i]*X(Rationals,StringFormatted("{}{}",s,i));
+    od;
+    return expr;
+end;;
+
+
+############## 函数10 Coordintation ##############
+Coordination := function(basis,vector)
+    ## 计算向量在基下的坐标 ##
+    local V;
+    V := VectorSpace(Rationals,basis);; #生成线性空间
+    basis := Basis(V,basis); #将向量集转化为基
+    return Coefficients(basis,vector);
+end;;
+
+
+############## 函数11 B ##############
+B := function(alpha,beta,R)
+    ## 根系R下，向量killing型内积 ##
+    local basis;
+    basis := SimpleSystem(R); #单根系作为基向量
+    alpha := Coordination(basis,alpha); #转化为坐标
+    beta := Coordination(basis,beta);
+    return alpha*BilinearFormMat(R)*beta; #计算内积（通过内积矩阵）
+end;;
+
+
+############## 函数12 SimpleDecomposition ##############
+SimpleDecomposition := function(positive,root,n)
+    ## 正根的单根分解，输入为向量形式##
+    local delta,dec,r;
+    delta := List([1..n],i->positive[i]); #单根系
+    dec := []; #初始化单根分解
+    while not root in delta do
+        for r in delta do
+            if (root-r) in positive then
+                Add(dec,r);
+                root := root - r;
+                break;
+            fi;
+        od;
+    od;
+    Add(dec,root);
+    return dec;
+end;;
+
+
+############## 函数13 PositiveSorted ##############
+PositiveSorted := function(positive,n)
+    ## 正根按字典序排序（升序） ##
+    local coos,delta;
+    delta := List([1..n],i->positive[i]); #单根系
+    coos := List(positive,root->Coordination(delta,root)); #获取坐标
+    Sort(coos); #坐标升序
+    return List(coos,coo->Sum([1..Size(coo)],i->coo[i]*delta[i]));
+end;;
+
+
+############## 函数14 ExtraspecialRoots ##############
+ExtraspecialRoots := function(positive,root)
+    ## 正根非单根的extraspecial分解 ##
+    local r,flag;
+    flag := false; #标记是否找到分解
+    #positive := PositiveSorted(positive); #正根集升序
+    for r in positive do
+        if root-r in positive then 
+            flag := true;
+            break;
+        fi;
+    od;
+    if not flag then
+        return fail;
+    else
+        return [r,root-r];
+    fi;
+end;;
+
+
+############## 函数15 RootsFactorial ##############
+RootsFactorial := function(root,positive,n)
+    ## root分解为正根之和，返回正根系下的坐标 ##
+    local coo,m,delta,tail,a,b,c,new,out;
+    delta := List([1..n],i->positive[i]); #初始化单根
+    coo := Coordination(delta,root); #获取root在基下的系数
+    if ForAny(coo,i -> i<0) then #判断是否有负系数项
+        print("输入不为正根！");return false;
+    fi;
+    m := Size(positive); #正根系个数
+    Append(coo,List([Size(coo)+1..m],i->0)); #补充末尾0系数
+    out := [[coo]]; #初始化输出数据
+    n := 1; #解的层数
+    while true do
+        tail := []; #初始化新一层解
+        for coo in out[n] do #遍历最后一层解
+            for a in [1..m] do #遍历各个位置的系数（正根）
+                if coo[a]=0 then continue; fi;
+                for b in [1..m] do
+                    if coo[b]=0 then continue; fi;
+                    if b=a then continue; fi;
+                    root := positive[a] + positive[b]; 
+                    if not root in positive then continue; fi;
+                    c := Position(positive,root); #定位和向量位置
+                    new := ShallowCopy(coo); #浅复制坐标
+                    new[a] := new[a] - 1;
+                    new[b] := new[b] - 1;
+                    new[c] := new[c] + 1;
+                    if new in tail then continue; fi;
+                    Add(tail,new); #添加新元素
+                od;
+            od;
+        od;
+        if Length(tail)=0 then break; fi;
+        n := n + 1;
+        Append(out,[tail]); #加入新一层解
+    od;
+    new := [];
+    for tail in out do
+        Append(new,tail);
+    od;
+    return new;
+end;
+
+
+############## 函数16 SymbolicPositiveRoots ##############
+SymbolicPositiveRoots := function(s,n...)
+    ## 打印正根系的单根表示（符号表示） ##
+    local R,m,positive,delta,delta_sym,coos,coos_sym,feedback;
+    feedback := false;
+    if Length(n) = 2 then 
+        feedback := n[2];
+    fi;
+    n := n[1]; 
+    R := RootSystem(SimpleLieAlgebra(s, n, Rationals));
+    positive := PositiveRoots(R);; #正根集列表
+    delta := SimpleSystem(R);; #单根系（列表）
+    delta_sym := List([1..n],i->X(Rationals,Join("a",i)));; #单根符号化
+    m := Length(positive);;
+    coos := List(positive,root->Coordination(delta,root));; #正根坐标集
+    coos_sym := List([1..m],i->coos[i]*delta_sym);;
+    Print(s,n,":\n");
+    for m in coos_sym do
+        print(m);
+    od;
+    if feedback then
+        return coos_sym;
+    fi;
+end;
+
+
+
+
+RexLie := [
+
+[LieExp,
+SetTable,NewTable,list2vector,SymbolizeTable,ReadTable,
+LieThetas,GroupOrdersMat,SymbolizeVector,Coordination,B,
+SimpleDecomposition,PositiveSorted,ExtraspecialRoots,
+RootsFactorial,SymbolicPositiveRoots],
+
+["LieExp",
+"SetTable", "NewTable", "list2vector", "SymbolizeTable", "ReadTable",
+"LieThetas", "GroupOrdersMat", "SymbolizeVector", "Coordination", "B",
+"SimpleDecomposition", "PositiveSorted", "ExtraspecialRoots",
+"RootsFactorial", "SymbolicPositiveRoots"]
+
+];
+

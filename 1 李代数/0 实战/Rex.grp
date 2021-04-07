@@ -1,0 +1,7 @@
+### 家用电脑工作环境 ###
+
+
+Read("RexStandard.grp");
+Read("RexLie.grp");
+Rex := [[RexStandard,RexLie],
+["RexStandard", "RexLie"]];
